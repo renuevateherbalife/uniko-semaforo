@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#063d2d">
+<title>UNIKO · Semáforo</title>
+<style>
+:root{--g:#159447;--y:#f2a900;--r:#e52b2b;--d:#063d2d;--bg:#eef3f1}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#17221f;font-family:Arial,Helvetica,sans-serif}
+header{background:var(--d);color:#fff;text-align:center;padding:18px 14px}.logo{font-size:36px;font-weight:900;letter-spacing:2px}header small{font-size:12px}
+main{max-width:760px;margin:auto;padding:14px}.card{background:#fff;border-radius:18px;padding:17px;margin-bottom:14px;box-shadow:0 4px 18px #0001}
+h2{margin:0 0 13px;color:var(--d);font-size:20px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{font-size:12px;font-weight:800;color:#53635e}input,select,textarea{width:100%;margin-top:5px;padding:13px;border:1px solid #d6dfdb;border-radius:12px;font-size:16px;background:#fff}textarea{min-height:72px;resize:vertical}
+.full{grid-column:1/-1}button{width:100%;padding:15px;border:0;border-radius:13px;font-weight:900;font-size:16px;cursor:pointer}.primary{background:var(--d);color:#fff}.secondary{background:#e7f1ed;color:var(--d);margin-top:9px}
+.hidden{display:none}.top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.name{font-size:26px;font-weight:900}.date{font-size:12px;color:#6b7773}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}.metric{padding:16px;border-radius:16px;text-align:center;border:2px solid}.metric h3{font-size:13px;margin:0}.value{font-size:34px;font-weight:900;margin:6px 0}.pill{display:inline-block;color:#fff;font-size:12px;font-weight:900;padding:7px 24px;border-radius:30px}.green{background:#eaf7ef;border-color:#b8e1c7}.green .pill{background:var(--g)}.yellow{background:#fff8df;border-color:#efd994}.yellow .pill{background:var(--y)}.red{background:#fff0f0;border-color:#efb4b4}.red .pill{background:var(--r)}
+.overall{margin-top:12px;padding:16px;border-radius:16px}.overall.redbg{background:#fff0f0}.overall.yellowbg{background:#fff8df}.overall.greenbg{background:#eaf7ef}.overall h3{margin:0 0 7px}
+.legend{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px}.legend div{padding:10px;border-radius:10px;font-size:11px;text-align:center;font-weight:800}.lg{background:#eaf7ef;color:#116d35}.ly{background:#fff8df;color:#8a6300}.lr{background:#fff0f0;color:#9d1717}
+.note{font-size:10px;color:#68736f;line-height:1.4;margin-top:12px}
+@media(max-width:470px){.grid,.metrics{grid-template-columns:1fr}.full{grid-column:auto}.name{font-size:22px}}
+</style>
+</head>
+<body>
+<header><div class="logo">UNIKO</div><small>Centro de Transformación Integral · Semáforo de evaluación</small></header>
+<main>
+<section class="card">
+<h2>Evaluación electrónica</h2>
+<div class="grid">
+<div><label>Nombre</label><input id="name" placeholder="Nombre completo"></div>
+<div><label>Teléfono</label><input id="phone" type="tel" placeholder="Opcional"></div>
+<div><label>Edad</label><input id="age" type="number" min="1" placeholder="42"></div>
+<div><label>Sexo</label><select id="sex"><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option></select></div>
+<div><label>Estatura (m)</label><input id="height" type="number" step="0.01" placeholder="1.65"></div>
+<div><label>Peso (kg)</label><input id="weight" type="number" step="0.1" placeholder="81"></div>
+<div><label>IMC</label><input id="bmi" type="number" step="0.1" placeholder="29.7"></div>
+<div><label>% Grasa</label><input id="fat" type="number" step="0.1" placeholder="32.0"></div>
+<div class="full"><label>Observaciones</label><textarea id="obs" placeholder="Observaciones de la evaluación"></textarea></div>
+<div class="full"><label>Referidos</label><textarea id="ref" placeholder="Nombres o contactos referidos"></textarea></div>
+</div>
+<button class="primary" style="margin-top:14px" onclick="generate()">GENERAR SEMÁFORO</button>
+</section>
+
+<section id="result" class="card hidden">
+<div class="top"><div><div class="name" id="rname"></div><div id="rinfo" style="font-size:13px;color:#66736e;margin-top:4px"></div></div><div class="date" id="rdate"></div></div>
+<div id="metrics" class="metrics"></div>
+<div id="overall" class="overall"><h3 id="otitle"></h3><div id="otext"></div></div>
+<div class="legend"><div class="lg">🟢 EN RANGO</div><div class="ly">🟡 ATENCIÓN</div><div class="lr">🔴 REQUIERE ACCIÓN</div></div>
+<button class="primary" style="margin-top:13px" onclick="downloadPNG()">DESCARGAR IMAGEN</button>
+<button class="secondary" onclick="sharePNG()">COMPARTIR</button>
+<div class="note">Los rangos de IMC y grasa corporal son una referencia para orientación. El % de grasa debe interpretarse según sexo y edad y, preferentemente, conforme al manual/modelo de la báscula utilizada. Esta ficha no sustituye una evaluación médica.</div>
+</section>
+<footer style="text-align:center;color:#68736f;font-size:11px;padding:4px 0 20px">UNIKO · Transforma tu cuerpo y mente</footer>
+</main>
+
+<script>
+let data=null;
+const $=id=>document.getElementById(id);
+
+function bmiLevel(v){
+ if(v<18.5)return ['VERDE','green','Bajo peso'];
+ if(v<25)return ['VERDE','green','Peso normal'];
+ if(v<30)return ['AMARILLO','yellow','Sobrepeso'];
+ return ['ROJO','red','Obesidad'];
+}
+
+/* Rangos tomados como referencia de la hoja entregada por UNIKO.
+   IMC: 0-5 Delgadez III; 6-10 II; 11-18 I; 18.6-24.9 normal;
+   25-29.9 sobrepeso; 30-34.9 obesidad I; 35-39.9 II; >=40 III.
+   Para el semáforo agrupamos normal en verde, sobrepeso en amarillo
+   y obesidad en rojo. */
+function fatLevel(age,sex,v){
+ // Tabla de referencia visible en la hoja: valores por edad y sexo.
+ // Se usan límites superiores aproximados de "normal" de la tabla.
+ let normalMax;
+ if(sex==='Hombre'){
+   if(age<=30) normalMax=18; else if(age<=40) normalMax=20; else if(age<=50) normalMax=22; else if(age<=60) normalMax=23; else normalMax=25;
+ }else{
+   if(age<=30) normalMax=26; else if(age<=40) normalMax=28; else if(age<=50) normalMax=30; else if(age<=60) normalMax=31; else normalMax=33;
+ }
+ if(v<=normalMax)return ['VERDE','green','En rango de referencia'];
+ if(v<=normalMax+4)return ['AMARILLO','yellow','Por encima del rango'];
+ return ['ROJO','red','Alto · requiere atención'];
+}
+
+function generate(){
+ const name=$('name').value.trim();
+ const age=Number($('age').value),sex=$('sex').value,h=Number($('height').value),w=Number($('weight').value),bmi=Number($('bmi').value),fat=Number($('fat').value);
+ if(!name||!age||!h||!w||!bmi||!fat){alert('Completa Nombre, Edad, Estatura, Peso, IMC y % Grasa.');return}
+ const bs=bmiLevel(bmi),fs=fatLevel(age,sex,fat);
+ data={name,phone:$('phone').value,age,sex,h,w,bmi,fat,obs:$('obs').value,ref:$('ref').value,date:new Date().toLocaleDateString('es-PE'),bs,fs};
+ $('rname').textContent=name;$('rinfo').textContent=`${age} años · ${sex} · ${h.toFixed(2)} m · ${w.toFixed(1)} kg`;$('rdate').textContent=data.date;
+ const ms=[['IMC',bmi.toFixed(1),'kg/m²',bs],['% GRASA',fat.toFixed(1),'%',fs],['PESO',w.toFixed(1),'kg',['AMARILLO','yellow','Dato registrado']],['ESTATURA',h.toFixed(2),'m',['VERDE','green','Dato registrado']]];
+ $('metrics').innerHTML=ms.map(m=>`<div class="metric ${m[3][1]}"><h3>${m[0]}</h3><div class="value">${m[1]}</div><div style="font-size:13px;margin-bottom:9px">${m[2]}</div><span class="pill">${m[3][0]}</span><div style="font-size:11px;margin-top:7px">${m[3][2]}</div></div>`).join('');
+ const red=bs[1]==='red'||fs[1]==='red',yellow=!red&&(bs[1]==='yellow'||fs[1]==='yellow');
+ $('overall').className='overall '+(red?'redbg':yellow?'yellowbg':'greenbg');
+ $('otitle').textContent=red?'🔴 REQUIERE ATENCIÓN':yellow?'🟡 HAY INDICADORES A MEJORAR':'🟢 RESULTADOS EN RANGO';
+ $('otext').textContent=red?'La evaluación muestra indicadores que requieren especial atención. Se recomienda establecer objetivos progresivos y realizar seguimiento.':yellow?'La evaluación muestra indicadores que pueden mejorarse. Un plan de hábitos saludables y seguimiento permite observar la evolución.':'Los indicadores evaluados están dentro del rango de referencia utilizado por UNIKO. Mantén los hábitos y continúa con el seguimiento.';
+ $('result').classList.remove('hidden');$('result').scrollIntoView({behavior:'smooth'});
+}
+
+function canvasImage(){
+ const W=1080,H=1380,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
+ x.fillStyle='#f5f8f7';x.fillRect(0,0,W,H);x.fillStyle='#063d2d';x.fillRect(0,0,W,175);
+ x.fillStyle='#fff';x.font='900 60px Arial';x.fillText('UNIKO',50,72);x.font='700 25px Arial';x.fillText('EVALUACIÓN DE COMPOSICIÓN CORPORAL',50,120);x.font='19px Arial';x.fillText('Conoce tu situación hoy · construye un mejor mañana',50,151);
+ x.fillStyle='#fff';x.fillRect(35,200,1010,100);x.fillStyle='#17221f';x.font='900 29px Arial';x.fillText(data.name,58,245);x.font='19px Arial';x.fillText(`${data.age} años · ${data.sex} · ${data.h.toFixed(2)} m · ${data.w.toFixed(1)} kg`,58,278);
+ const cards=[['IMC',data.bmi.toFixed(1),'kg/m²',data.bs],['% GRASA',data.fat.toFixed(1),'%',data.fs],['PESO',data.w.toFixed(1),'kg',['AMARILLO','yellow','Registrado']],['ESTATURA',data.h.toFixed(2),'m',['VERDE','green','Registrado']]];
+ const bg={red:'#fff0f0',yellow:'#fff8df',green:'#eaf7ef'},col={red:'#e52b2b',yellow:'#f2a900',green:'#159447'};
+ cards.forEach((m,i)=>{let xx=35+i*250;x.fillStyle=bg[m[3][1]];x.fillRect(xx,330,230,315);x.fillStyle='#17221f';x.font='800 21px Arial';x.fillText(m[0],xx+18,365);x.font='900 52px Arial';x.fillText(m[1],xx+18,430);x.font='19px Arial';x.fillText(m[2],xx+18,456);x.fillStyle=col[m[3][1]];x.fillRect(xx+18,480,194,44);x.fillStyle='#fff';x.font='900 19px Arial';x.textAlign='center';x.fillText(m[3][0],xx+115,509);x.textAlign='left';x.fillStyle='#17221f';x.font='16px Arial';x.fillText(m[3][2],xx+18,548);});
+ x.fillStyle='#063d2d';x.fillRect(35,680,1010,60);x.fillStyle='#fff';x.font='900 27px Arial';x.fillText('RESULTADO GENERAL',55,718);
+ const red=data.bs[1]==='red'||data.fs[1]==='red',yellow=!red&&(data.bs[1]==='yellow'||data.fs[1]==='yellow');
+ x.fillStyle=red?'#fff0f0':yellow?'#fff8df':'#eaf7ef';x.fillRect(35,760,1010,205);x.fillStyle=red?'#b21c1c':yellow?'#8a6300':'#116d35';x.font='900 30px Arial';x.fillText(red?'🔴 REQUIERE ATENCIÓN':yellow?'🟡 HAY INDICADORES A MEJORAR':'🟢 RESULTADOS EN RANGO',60,812);x.fillStyle='#17221f';x.font='20px Arial';['Revisa los indicadores señalados y establece objetivos realistas.','Los cambios deben ser progresivos y sostenibles.','Realiza seguimiento periódico para observar tu evolución.'].forEach((t,j)=>x.fillText(t,60,855+j*34));
+ x.fillStyle='#063d2d';x.fillRect(35,1000,1010,58);x.fillStyle='#fff';x.font='900 25px Arial';x.fillText('PRÓXIMOS PASOS',55,1038);x.fillStyle='#17221f';x.font='20px Arial';['Plan de hábitos saludables','Actividad física progresiva','Seguimiento periódico','Mejorar composición corporal'].forEach((t,j)=>x.fillText('✓  '+t,65,1090+j*39));
+ x.fillStyle='#063d2d';x.fillRect(0,1260,W,120);x.fillStyle='#fff';x.font='italic 32px Arial';x.fillText('Transforma tu cuerpo y mente',620,1330);return c;
+}
+function downloadPNG(){if(!data)return;const a=document.createElement('a');a.download='UNIKO_'+data.name.replace(/\s+/g,'_')+'.png';a.href=canvasImage().toDataURL('image/png');a.click()}
+async function sharePNG(){if(!data)return;const blob=await new Promise(r=>canvasImage().toBlob(r,'image/png'));const f=new File([blob],'UNIKO_'+data.name.replace(/\s+/g,'_')+'.png',{type:'image/png'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({title:'Evaluación UNIKO',text:'Resultado de evaluación corporal',files:[f]});else{downloadPNG();alert('Se descargó la imagen. Ahora puedes enviarla por WhatsApp.');}}
+</script>
+</body></html>
